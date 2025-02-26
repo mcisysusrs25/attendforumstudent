@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Register</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 1);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 16px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+        }
+
+        .header {
+            padding: 30px 40px 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .header img {
+            height: 64;
+            width: 64;
+        }
+
+        .tab {
+            display: flex;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 30px;
+        }
+
+        .tab div {
+            flex: 1;
+            text-align: center;
+            padding: 16px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #777;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .tab div.active {
+            color: #5a67d8;
+        }
+
+        .tab div.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #5a67d8;
+            border-radius: 3px 3px 0 0;
+        }
+
+        .form-container {
+            display: none;
+            padding: 0 40px 40px;
+        }
+
+        .form-container.active {
+            display: block;
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 1px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #f8f9fa;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #5a67d8;
+            box-shadow: 0 0 0 3px rgba(90, 103, 216, 0.2);
+            background: white;
+        }
+
+        .input-group input::placeholder {
+            color: #aaa;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #5a67d8 0%, #4c51bf 100%);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(90, 103, 216, 0.4);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        .separator {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #eee;
+        }
+
+        .separator span {
+            padding: 0 10px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #aaa;
+            margin-top: 20px;
+        }
+
+        .logo {
+            height: 100px;
+            /* Add px */
+            width: auto;
+            /* Ensure aspect ratio is maintained */
+            display: block;
+            /* Fix alignment issues */
+            margin: 0 auto;
+            /* Center it */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <img class="logo" src="logo.png">
+            <h1>Welcome Back</h1>
+            <p>Sign in to continue your learning journey</p>
+        </div>
+
+        <div class="tab">
+            <div id="loginTab" class="active" onclick="switchTab('login')">Sign In</div>
+            <div id="registerTab" onclick="switchTab('register')">Create Account</div>
+        </div>
+
+        <div id="loginForm" class="form-container active">
+            <div class="input-group">
+                <input type="email" id="loginEmail" placeholder="Student Email">
+            </div>
+            <div class="input-group">
+                <input type="text" id="loginStudentID" placeholder="Student ID">
+            </div>
+            <button onclick="loginUser()">Sign In</button>
+
+            <div class="separator">
+               
+            </div>
+
+            <div class="footer">
+                Forgot your details? <a href="#" style="color: #5a67d8; text-decoration: none;">Get help</a>
+            </div>
+        </div>
+
+        <div id="registerForm" class="form-container">
+            <div class="input-group">
+                <input type="text" id="firstName" placeholder="First Name">
+            </div>
+            <div class="input-group">
+                <input type="text" id="lastName" placeholder="Last Name">
+            </div>
+            <div class="input-group">
+                <input type="email" id="email" placeholder="Student Email">
+            </div>
+            <div class="input-group">
+                <input type="text" id="studentID" placeholder="Student ID">
+            </div>
+            <button onclick="registerUser()">Create Account</button>
+
+            <div class="footer">
+                By creating an account, you agree to our <a href="#"
+                    style="color: #5a67d8; text-decoration: none;">Terms of Service</a> and <a href="#"
+                    style="color: #5a67d8; text-decoration: none;">Privacy Policy</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:5000/api";
+
+        function switchTab(tab) {
+            document.getElementById("loginForm").classList.remove("active");
+            document.getElementById("registerForm").classList.remove("active");
+            document.getElementById("loginTab").classList.remove("active");
+            document.getElementById("registerTab").classList.remove("active");
+
+            if (tab === 'login') {
+                document.getElementById("loginForm").classList.add("active");
+                document.getElementById("loginTab").classList.add("active");
+            } else {
+                document.getElementById("registerForm").classList.add("active");
+                document.getElementById("registerTab").classList.add("active");
+            }
+        }
+
+        async function registerUser() {
+            const firstName = document.getElementById("firstName").value.trim();
+            const lastName = document.getElementById("lastName").value.trim();
+            const studentEmail = document.getElementById("email").value.trim();
+            const studentID = document.getElementById("studentID").value.trim();
+
+            if (!firstName || !lastName || !studentEmail || !studentID) {
+                alert("All fields are required!");
+                return;
+            }
+
+            const registerData = { firstName, lastName, studentEmail, studentID };
+
+            try {
+                const registerResponse = await fetch(`${API_BASE_URL}/students/add`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(registerData),
+                });
+
+                const registerResult = await registerResponse.json();
+
+                if (registerResponse.ok) {
+                    console.log("✅ Registration Successful!", registerResult);
+                    loginUser(studentEmail, studentID);
+                } else {
+                    alert("Registration failed! " + registerResult.message);
+                }
+            } catch (error) {
+                console.error("❌ Error:", error);
+                alert("An error occurred. Please try again.");
+            }
+        }
+
+        async function loginUser(email = null, studentID = null) {
+            const userEmail = email || document.getElementById("loginEmail").value.trim();
+            const userID = studentID || document.getElementById("loginStudentID").value.trim();
+
+            if (!userEmail || !userID) {
+                alert("Both Email and Student ID are required!");
+                return;
+            }
+
+            const loginData = { email: userEmail, userID, userType: "student" };
+
+            try {
+                const loginResponse = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(loginData),
+                });
+
+                const loginResult = await loginResponse.json();
+
+                if (loginResponse.ok) {
+                    console.log("✅ Login Successful!", loginResult);
+
+                    localStorage.setItem("token", loginResult.data.token);
+                    localStorage.setItem("userID", loginResult.data.user.id);
+                    localStorage.setItem("userEmail", loginResult.data.user.email);
+                    localStorage.setItem("userName", loginResult.data.user.fullName);
+
+                    alert("Login successful! Redirecting to sessions...");
+                    window.location.href = "sessions.html";
+                } else {
+                    alert("Login failed! Please try again.");
+                }
+            } catch (error) {
+                console.error("❌ Error:", error);
+                alert("An error occurred. Please try again.");
+            }
+        }
+    </script>
+</body>
+
+</html>
