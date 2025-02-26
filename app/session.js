@@ -417,7 +417,7 @@ function logout() {
     // Clear local storage
     setTimeout(() => {
         localStorage.clear();
-        window.location.href = "auth.html";
+        window.location.href = "index.html";
     }, 1000);
 }
 
