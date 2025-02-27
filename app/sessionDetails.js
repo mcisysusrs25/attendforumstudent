@@ -1,13 +1,39 @@
+// API URLs
 const API_BASE_URL_LOCAL = "http://localhost:5000/api";
 const API_BASE_URL = "https://attend-forum-server-dev-1-0.onrender.com/api";
 
-let currentSessions = [];
-let selectedSessionID = null;
+// Session details and user variables
+let sessionData = null;
+let sessionID = null;
 let userLat = null;
 let userLong = null;
 
-// Session data fetch with improved error handling and loading states
-async function fetchSessions() {
+// Initialize on page load
+window.onload = function() {
+    // Get session ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    sessionID = urlParams.get('sessionID');
+    
+    if (!sessionID) {
+        showError("No session ID provided. Please go back and select a session.");
+        return;
+    }
+    
+    // Update user information from localStorage
+    const userName = localStorage.getItem("userName") || "Student";
+    document.getElementById("userName").textContent = userName;
+    
+    // Fetch session details
+    fetchSessionDetails();
+};
+
+// Navigate back to sessions page
+function goBack() {
+    window.location.href = "sessions.html";
+}
+
+// Fetch session details
+async function fetchSessionDetails() {
     const token = localStorage.getItem("token");
     const userID = localStorage.getItem("userID");
 
@@ -20,20 +46,14 @@ async function fetchSessions() {
         return;
     }
 
-    // Update user information
-    const userName = localStorage.getItem("userName") || "Student";
-    document.getElementById("userName").textContent = userName;
-    document.getElementById("userNameInfo").textContent = userName;
-    document.getElementById("userEmail").textContent = localStorage.getItem("userEmail") || "No email";
-
     // Show loading state
     toggleElement("loadingIndicator", true);
     toggleElement("errorContainer", false);
-    toggleElement("emptyState", false);
-    toggleElement("sessionsGrid", false);
+    toggleElement("sessionDetailsCard", false);
+    toggleElement("attendanceCard", false);
 
     try {
-        const response = await fetch(`${API_BASE_URL}/student/sessions/${userID}`, {
+        const response = await fetch(`${API_BASE_URL}/sessions/gsd/${sessionID}`, {
             method: "GET",
             headers: {
                 "Authorization": `Bearer ${token}`,
@@ -46,190 +66,164 @@ async function fetchSessions() {
         // Hide loading state
         toggleElement("loadingIndicator", false);
 
-        if (response.ok) {
-            currentSessions = result.data || [];
-
-            // Update session count badge
-            document.getElementById("sessionCount").textContent = currentSessions.length;
-
-            // Show sessions
-            showTab('active');
-            showToast("success", "Success", "Sessions loaded successfully");
+        if (response.ok && result.data) {
+            sessionData = result.data;
+            renderSessionDetails();
+            showToast("success", "Success", "Session details loaded successfully");
         } else {
             // Show error state with message from API
-            showError("Failed to load sessions: " + result.message);
+            showError("Failed to load session details: " + (result.message || "Unknown error"));
         }
     } catch (error) {
-        console.error("Error fetching sessions:", error);
+        console.error("Error fetching session details:", error);
         toggleElement("loadingIndicator", false);
         showError("Network error. Please check your connection and try again.");
     }
 }
 
-// Show sessions based on tab (active or completed)
-function showTab(tab) {
-    // Update active tab styling
-    const activeTab = document.getElementById("activeTab");
-    const completedTab = document.getElementById("completedTab");
+// Render session details
+function renderSessionDetails() {
+    if (!sessionData) return;
 
-    activeTab.classList.toggle("active", tab === 'active');
-    completedTab.classList.toggle("active", tab === 'completed');
-
-    // Filter sessions based on status
-    const filteredSessions = currentSessions.filter(session =>
-        session.sessionStatus === (tab === 'active' ? 'active' : 'completed')
-    );
-
-    const sessionsGrid = document.getElementById("sessionsGrid");
-    sessionsGrid.innerHTML = "";
-
-    // Show empty state if no sessions
-    if (filteredSessions.length === 0) {
-        document.getElementById("emptyStateMessage").textContent =
-            `There are no ${tab} sessions available right now.`;
-        toggleElement("emptyState", true);
-        toggleElement("sessionsGrid", false);
-        return;
-    }
-
-    // Show sessions grid
-    toggleElement("emptyState", false);
-    toggleElement("sessionsGrid", true);
-
-    // Sort sessions - absent sessions first for active tab
-    if (tab === 'active') {
-        filteredSessions.sort((a, b) => {
-            const userIDA = localStorage.getItem("userID");
-            const studentA = a.students.find(student => student.studentID === userIDA);
-            const studentB = b.students.find(student => student.studentID === userIDA);
-
-            const isAbsentA = studentA && studentA.attendanceStatus === "Absent";
-            const isAbsentB = studentB && studentB.attendanceStatus === "Absent";
-
-            // If A is absent and B is not, A comes first
-            if (isAbsentA && !isAbsentB) return -1;
-            // If B is absent and A is not, B comes first
-            if (!isAbsentA && isAbsentB) return 1;
-
-            // If both have the same attendance status, sort by start time (newer first)
-            return new Date(b.sessionValidFrom) - new Date(a.sessionValidFrom);
-        });
-    }
-
-    // Render each session card
-    filteredSessions.forEach(session => {
-        const card = createSessionCard(session, tab);
-        sessionsGrid.appendChild(card);
-    });
-}
-function navigateToSession(sessionID) {
-    window.location.href = `sessionDetails.html?sessionID=${sessionID}`;
-}
-// Create a session card element
-function createSessionCard(session, tabType) {
-    const card = document.createElement("div");
-    card.className = "card bg-white p-6 rounded-xl shadow-md relative";
-
-    // Define badge color based on status
-    const badgeColor = session.sessionStatus === 'active'
-        ? 'bg-indigo-500 text-white'
-        : 'bg-gray-500 text-white';
-
-    // Card badge (active/completed)
-    card.innerHTML = `
-        <div class="card-badge ${badgeColor}">
-            ${session.sessionStatus.charAt(0).toUpperCase() + session.sessionStatus.slice(1)}
-        </div>
-    `;
-
-    // Session date formatting
-    const startDate = new Date(session.sessionValidFrom);
-    const endDate = new Date(session.sessionValidTo);
+    const sessionDetailsCard = document.getElementById("sessionDetailsCard");
+    const attendanceCard = document.getElementById("attendanceCard");
+    
+    // Format dates
+    const startDate = new Date(sessionData.sessionValidFrom);
+    const endDate = new Date(sessionData.sessionValidTo);
     const dateOptions = {
-        weekday: 'short',
-        month: 'short',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
     };
 
-    // Calculate if session is happening now
+    // Calculate session status
     const now = new Date();
+    const isActive = sessionData.sessionStatus === "active";
     const isHappeningNow = now >= startDate && now <= endDate;
-
-    // Attendance status
-    const studentInfo = session.students.find(student => student.studentID === localStorage.getItem("userID"));
-    const attendanceStatus = studentInfo ? studentInfo.attendanceStatus : "Unknown";
+    const badgeClass = isActive 
+        ? (isHappeningNow ? 'bg-green-500' : 'bg-indigo-500') 
+        : 'bg-gray-500';
+    
+    // Get current user's attendance status
+    const userID = localStorage.getItem("userID");
+    const studentInfo = sessionData.students.find(student => student.studentID === userID);
+    const attendanceStatus = studentInfo ? studentInfo.attendanceStatus : "Absent";
     const isPresent = attendanceStatus === "Present";
-
-    // Attendance badge styling
-    const attendanceBadgeClass = isPresent
+    
+    // Set status badge class
+    const statusBadgeClass = isPresent
         ? 'bg-green-100 text-green-800'
         : 'bg-red-100 text-red-700';
 
-    // Main card content
-    card.innerHTML += `
-        <div class="mt-2">
-            <h3 class="text-xl font-bold text-gray-800 mb-2">${session.sessionTitle}</h3>
-            <p class="text-gray-600 mb-4">${session.sessionDescription}</p>
-            
-            <div class="space-y-3 mb-4">
-                <div class="flex items-center text-sm">
-                    <i class="fas fa-calendar-alt text-indigo-500 w-5"></i>
-                    <span class="ml-2">
-                        ${startDate.toLocaleDateString('en-US', dateOptions)} - 
-                        ${endDate.toLocaleDateString('en-US', dateOptions)}
-                    </span>
+    // Populate session details card
+    sessionDetailsCard.innerHTML = `
+        <div class="flex justify-between items-start mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">${sessionData.sessionTitle}</h2>
+                <p class="text-gray-600">${sessionData.sessionDescription}</p>
+            </div>
+            <span class="px-4 py-2 rounded-full text-sm font-bold text-white ${badgeClass}">
+                ${isHappeningNow ? 'Happening Now' : sessionData.sessionStatus.charAt(0).toUpperCase() + sessionData.sessionStatus.slice(1)}
+            </span>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <i class="fas fa-calendar-alt text-indigo-500 w-6 text-xl"></i>
+                    <div class="ml-3">
+                        <h4 class="font-semibold text-gray-700">Start Time</h4>
+                        <p>${startDate.toLocaleDateString('en-US', dateOptions)}</p>
+                    </div>
                 </div>
                 
-                <div class="flex items-center text-sm">
-                    <i class="fas fa-info-circle text-indigo-500 w-5"></i>
-                    <span class="ml-2">Session ID: ${session.sessionID}</span>
-                </div>
-
-                  <div class="flex items-center text-sm">
-                    <i class="fas fa-clipboard-check text-indigo-500 w-5"></i>
-                    <span class="ml-2">See Details: 
-                        <span class="status-badge ${attendanceBadgeClass}">
-                            ${attendanceStatus}
-                        </span>
-                    </span>
+                <div class="flex items-center">
+                    <i class="fas fa-clock text-indigo-500 w-6 text-xl"></i>
+                    <div class="ml-3">
+                        <h4 class="font-semibold text-gray-700">End Time</h4>
+                        <p>${endDate.toLocaleDateString('en-US', dateOptions)}</p>
+                    </div>
                 </div>
             </div>
-            <button 
-  class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-500 to-red-500 text-white font-semibold rounded-full shadow-lg hover:from-red-500 hover:to-pink-500 transition-all duration-300 ease-in-out transform hover:scale-105" 
-  onclick="navigateToSession('${session.sessionID}')"
->
-  See Details
-  <svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-  </svg>
-</button>
-
+            
+            <div class="space-y-4">
+                <div class="flex items-center">
+                    <i class="fas fa-book text-indigo-500 w-6 text-xl"></i>
+                    <div class="ml-3">
+                        <h4 class="font-semibold text-gray-700">Subject Code</h4>
+                        <p>${sessionData.subjectCode || 'N/A'}</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center">
+                    <i class="fas fa-id-card text-indigo-500 w-6 text-xl"></i>
+                    <div class="ml-3">
+                        <h4 class="font-semibold text-gray-700">Session ID</h4>
+                        <p>${sessionData.sessionID}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="border-t border-gray-200 pt-6">
+            <div class="flex items-center">
+                <i class="fas fa-user-check text-indigo-500 w-6 text-xl"></i>
+                <div class="ml-3">
+                    <h4 class="font-semibold text-gray-700">Created By</h4>
+                    <p>${sessionData.createdBy || 'N/A'}</p>
+                </div>
+            </div>
         </div>
     `;
-
-    // Add attendance button if applicable
-    if (session.sessionStatus === "active" && attendanceStatus === "Absent") {
+    
+    // Attendance card
+    attendanceCard.innerHTML = `
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Attendance Status</h3>
+        
+        <div class="flex items-center mb-6">
+            <div class="mr-4">
+                <span class="inline-block rounded-full h-16 w-16 flex items-center justify-center ${isPresent ? 'bg-green-500' : 'bg-red-500'} text-white">
+                    <i class="fas ${isPresent ? 'fa-check' : 'fa-times'} text-2xl"></i>
+                </span>
+            </div>
+            <div>
+                <h4 class="text-lg font-bold ${isPresent ? 'text-green-700' : 'text-red-700'}">
+                    ${attendanceStatus}
+                </h4>
+                <p class="text-gray-600">
+                    ${isPresent 
+                        ? 'Your attendance has been confirmed for this session.' 
+                        : 'Your attendance has not been marked for this session.'}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    // Add attendance button if needed
+    if (isActive && !isPresent) {
         const attendanceButton = document.createElement("button");
-        attendanceButton.className = "w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-all duration-300 flex items-center justify-center";
+        attendanceButton.className = "w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-3 rounded-lg transition-all duration-300 flex items-center justify-center";
         attendanceButton.innerHTML = `
             <i class="fas fa-check-circle mr-2"></i>
             Mark Attendance
         `;
-        attendanceButton.onclick = () => promptAttendance(session.sessionID, session.sessionTitle);
-        card.appendChild(attendanceButton);
+        attendanceButton.onclick = () => promptAttendance(sessionData.sessionID, sessionData.sessionTitle);
+        attendanceCard.appendChild(attendanceButton);
     }
-
-    return card;
+    
+    // Show the cards
+    toggleElement("sessionDetailsCard", true);
+    toggleElement("attendanceCard", true);
 }
 
 // Show attendance prompt
 function promptAttendance(sessionID, sessionTitle = "this session") {
-    selectedSessionID = sessionID;
-
     // Update popup message
-    document.getElementById("popupMessage").textContent =
+    document.getElementById("popupMessage").textContent = 
         `Are you sure you want to mark your attendance for ${sessionTitle}?`;
 
     // Reset location elements
@@ -294,7 +288,7 @@ function getLocationErrorMessage(error) {
 
 // Submit attendance
 async function confirmAttendance() {
-    if (!selectedSessionID || userLat === null || userLong === null) {
+    if (!sessionID || userLat === null || userLong === null) {
         showToast("error", "Error", "Location data is required");
         return;
     }
@@ -319,7 +313,7 @@ async function confirmAttendance() {
 
     // Prepare request payload
     const payload = {
-        sessionID: selectedSessionID,
+        sessionID: sessionID,
         studentID: userID,
         latitude: parseFloat(userLat),
         longitude: parseFloat(userLong),
@@ -328,10 +322,7 @@ async function confirmAttendance() {
 
     try {
         const attendUrl = `${API_BASE_URL}/student/sessions/mark-attendance`;
-        console.log("Sending attendance data:", JSON.stringify(payload, null, 2));
-        console.log(token);
-        console.log(attendUrl);
-
+        
         const response = await fetch(attendUrl, {
             method: "POST",
             headers: {
@@ -354,8 +345,8 @@ async function confirmAttendance() {
         if (response.ok) {
             showToast("success", "Success", "Attendance marked successfully!");
             closePopup();
-            // Refresh sessions data
-            fetchSessions();
+            // Refresh session details
+            fetchSessionDetails();
         } else {
             const errorMsg = result.message || `Failed to mark attendance (${response.status})`;
             console.error("Attendance error:", errorMsg);
@@ -377,8 +368,7 @@ function closePopup() {
     popup.classList.add("hidden");
     popup.classList.remove("flex");
 
-    // Reset selected session and location
-    selectedSessionID = null;
+    // Reset location
     userLat = null;
     userLong = null;
 }
@@ -390,8 +380,7 @@ function showError(message) {
 
     errorMessage.textContent = message;
     toggleElement("errorContainer", true);
-    toggleElement("sessionsGrid", false);
-    toggleElement("emptyState", false);
+    toggleElement("loadingIndicator", false);
 }
 
 // Show toast notification
@@ -472,6 +461,3 @@ function logout() {
         window.location.href = "index.html";
     }, 1000);
 }
-
-// Initialize on page load
-window.onload = fetchSessions;
