@@ -300,7 +300,7 @@ async function confirmAttendance() {
         showToast("error", "Authentication error", "Please log in again");
         closePopup();
         setTimeout(() => {
-            window.location.href = "index.html";
+            window.location.href = "auth.html";
         }, 2000);
         return;
     }

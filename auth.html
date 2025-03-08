@@ -32,6 +32,7 @@
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             transition: all 0.3s ease;
+            position: relative;
         }
 
         .container:hover {
@@ -58,8 +59,8 @@
         }
 
         .header img {
-            height: 64;
-            width: 64;
+            height: 64px;
+            width: 64px;
         }
 
         .tab {
@@ -157,7 +158,7 @@
         }
 
         button:hover {
-            transform: translateY(-2px);
+            transform: none; /* Remove hover effect */
             box-shadow: 0 5px 15px rgba(90, 103, 216, 0.4);
         }
 
@@ -194,13 +195,35 @@
 
         .logo {
             height: 100px;
-            /* Add px */
             width: auto;
-            /* Ensure aspect ratio is maintained */
             display: block;
-            /* Fix alignment issues */
             margin: 0 auto;
-            /* Center it */
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #5a67d8;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .message {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #5a67d8;
         }
     </style>
 </head>
@@ -209,7 +232,7 @@
     <div class="container">
         <div class="header">
             <a href="/attendforumstudent/index.html">
-            <img class="logo" src="assets/logo/logo-indigo.png"></a>
+                <img class="logo" src="assets/logo/logo-indigo.png"></a>
             <h1>AttendForum</h1>
             <p>The Complete Attendence App</p>
         </div>
@@ -224,13 +247,12 @@
                 <input type="email" id="loginEmail" placeholder="Student Email">
             </div>
             <div class="input-group">
-                <input type="text" id="loginStudentID" placeholder="Student ID">
+                <input type="text" id="loginStudentID" placeholder="Student ID" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <button onclick="loginUser()">Sign In</button>
+            <button onclick="loginUser()" id="loginButton">Sign In</button>
+            <div class="message" id="loginMessage"></div>
 
-            <div class="separator">
-               
-            </div>
+            <div class="separator"></div>
 
             <div class="footer">
                 Forgot your details? <a href="/attendforumstudent/index.html#support" style="color: #5a67d8; text-decoration: none;">Get help</a>
@@ -248,9 +270,10 @@
                 <input type="email" id="email" placeholder="Student Email">
             </div>
             <div class="input-group">
-                <input type="text" id="studentID" placeholder="Student ID">
+                <input type="text" id="studentID" placeholder="Student ID" oninput="this.value = this.value.toUpperCase()">
             </div>
-            <button onclick="registerUser()">Create Account</button>
+            <button onclick="registerUser()" id="registerButton">Create Account</button>
+            <div class="message" id="registerMessage"></div>
 
             <div class="footer">
                 By creating an account, you agree to our <a href="#"
@@ -286,9 +309,13 @@
             const studentID = document.getElementById("studentID").value.trim();
 
             if (!firstName || !lastName || !studentEmail || !studentID) {
-                alert("All fields are required!");
+                document.getElementById("registerMessage").textContent = "All fields are required!";
                 return;
             }
+
+            const registerButton = document.getElementById("registerButton");
+            registerButton.disabled = true;
+            registerButton.innerHTML = '<div class="loading-spinner"></div>';
 
             const registerData = { firstName, lastName, studentEmail, studentID };
 
@@ -302,14 +329,17 @@
                 const registerResult = await registerResponse.json();
 
                 if (registerResponse.ok) {
-                    console.log("✅ Registration Successful!", registerResult);
+                    document.getElementById("registerMessage").textContent = "✅ Registration Successful!";
                     loginUser(studentEmail, studentID);
                 } else {
-                    alert("Registration failed! " + registerResult.message);
+                    document.getElementById("registerMessage").textContent = "❌ Registration failed: " + registerResult.message;
                 }
             } catch (error) {
                 console.error("❌ Error:", error);
-                alert("An error occurred. Please try again.");
+                document.getElementById("registerMessage").textContent = "An error occurred. Please try again.";
+            } finally {
+                registerButton.disabled = false;
+                registerButton.textContent = "Create Account";
             }
         }
 
@@ -318,9 +348,13 @@
             const userID = studentID || document.getElementById("loginStudentID").value.trim();
 
             if (!userEmail || !userID) {
-                alert("Both Email and Student ID are required!");
+                document.getElementById("loginMessage").textContent = "Both Email and Student ID are required!";
                 return;
             }
+
+            const loginButton = document.getElementById("loginButton");
+            loginButton.disabled = true;
+            loginButton.innerHTML = '<div class="loading-spinner"></div>';
 
             const loginData = { email: userEmail, userID, userType: "student" };
 
@@ -334,21 +368,23 @@
                 const loginResult = await loginResponse.json();
 
                 if (loginResponse.ok) {
-                    console.log("✅ Login Successful!", loginResult);
-
+                    document.getElementById("loginMessage").textContent = "✅ Login Successful! Redirecting...";
                     localStorage.setItem("token", loginResult.data.token);
                     localStorage.setItem("userID", loginResult.data.user.id);
                     localStorage.setItem("userEmail", loginResult.data.user.email);
                     localStorage.setItem("userName", loginResult.data.user.fullName);
-
-                    alert("Login successful! Redirecting to sessions...");
-                    window.location.href = "sessions.html";
+                    setTimeout(() => {
+                        window.location.href = "sessions.html";
+                    }, 2000);
                 } else {
-                    alert("Login failed! Please try again.");
+                    document.getElementById("loginMessage").textContent = "❌ Login failed: " + loginResult.message;
                 }
             } catch (error) {
                 console.error("❌ Error:", error);
-                alert("An error occurred. Please try again.");
+                document.getElementById("loginMessage").textContent = "An error occurred. Please try again.";
+            } finally {
+                loginButton.disabled = false;
+                loginButton.textContent = "Sign In";
             }
         }
     </script>

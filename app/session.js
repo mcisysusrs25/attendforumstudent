@@ -15,7 +15,7 @@ async function fetchSessions() {
     if (!token || !userID) {
         showToast("error", "Authentication error", "Please log in again");
         setTimeout(() => {
-            window.location.href = "index.html";
+            window.location.href = "auth.html";
         }, 2000);
         return;
     }
@@ -469,7 +469,7 @@ function logout() {
     // Clear local storage
     setTimeout(() => {
         localStorage.clear();
-        window.location.href = "index.html";
+        window.location.href = "auth.html";
     }, 1000);
 }
 
